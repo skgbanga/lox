@@ -1,30 +1,31 @@
 from tokens import *
 import lox
 
+
 class Scanner:
     def __init__(self, source):
         self.source = source
         self.tokens = []
         self.start = 0  # token start
         self.current = 0
-        self.line = 1;
+        self.line = 1
         self.keywords = {
-    		"and":    TokenType.AND,
-    		"class":  TokenType.CLASS,
-    		"else":   TokenType.ELSE,
-    		"for":    TokenType.FOR,
-    		"fun":    TokenType.FUN,
-    		"if":     TokenType.IF,
-    		"nil":    TokenType.NIL,
-    		"or":     TokenType.OR,
-    		"print":  TokenType.PRINT,
-    		"return": TokenType.RETURN,
-    		"super":  TokenType.SUPER,
-    		"this":   TokenType.THIS,
-    		"true":   TokenType.TRUE,
-    		"false":  TokenType.FALSE,
-    		"var":    TokenType.VAR,
-    		"while":  TokenType.WHILE,
+            "and": TokenType.AND,
+            "class": TokenType.CLASS,
+            "else": TokenType.ELSE,
+            "for": TokenType.FOR,
+            "fun": TokenType.FUN,
+            "if": TokenType.IF,
+            "nil": TokenType.NIL,
+            "or": TokenType.OR,
+            "print": TokenType.PRINT,
+            "return": TokenType.RETURN,
+            "super": TokenType.SUPER,
+            "this": TokenType.THIS,
+            "true": TokenType.TRUE,
+            "false": TokenType.FALSE,
+            "var": TokenType.VAR,
+            "while": TokenType.WHILE,
         }
 
     def scan_tokens(self):
@@ -37,39 +38,63 @@ class Scanner:
 
     def scan_token(self):
         c = self.advance()
-        if   c == '(': self.add_token(TokenType.LEFT_PAREN)
-        elif c == ')': self.add_token(TokenType.RIGHT_PAREN)
-        elif c == '{': self.add_token(TokenType.LEFT_BRACE)
-        elif c == '}': self.add_token(TokenType.RIGHT_BRACE)
-        elif c == ',': self.add_token(TokenType.COMMA)
-        elif c == '.': self.add_token(TokenType.DOT)
-        elif c == '-': self.add_token(TokenType.MINUS)
-        elif c == '+': self.add_token(TokenType.PLUS)
-        elif c == ';': self.add_token(TokenType.SEMICOLON)
-        elif c == '*': self.add_token(TokenType.STAR)
-        elif c == '!': self.add_token(TokenType.BANG_EQUAL if self.match('=') else TokenType.BANG)
-        elif c == '=': self.add_token(TokenType.EQUAL_EQUAL if self.match('=') else TokenType.EQUAL)
-        elif c == '<': self.add_token(TokenType.LESS_EQUAL if self.match('=') else TokenType.LESS)
-        elif c == '>': self.add_token(TokenType.GREATER_EQUAL if self.match('=') else TokenType.GREATER)
-        elif c == '/':
-            if match('/'):  # a comment, consume till \n
-                while not self.at_end() and self.peek() != '\n':
+        if c == "(":
+            self.add_token(TokenType.LEFT_PAREN)
+        elif c == ")":
+            self.add_token(TokenType.RIGHT_PAREN)
+        elif c == "{":
+            self.add_token(TokenType.LEFT_BRACE)
+        elif c == "}":
+            self.add_token(TokenType.RIGHT_BRACE)
+        elif c == ",":
+            self.add_token(TokenType.COMMA)
+        elif c == ".":
+            self.add_token(TokenType.DOT)
+        elif c == "-":
+            self.add_token(TokenType.MINUS)
+        elif c == "+":
+            self.add_token(TokenType.PLUS)
+        elif c == ";":
+            self.add_token(TokenType.SEMICOLON)
+        elif c == "*":
+            self.add_token(TokenType.STAR)
+        elif c == "!":
+            self.add_token(TokenType.BANG_EQUAL if self.match("=") else TokenType.BANG)
+        elif c == "=":
+            self.add_token(
+                TokenType.EQUAL_EQUAL if self.match("=") else TokenType.EQUAL
+            )
+        elif c == "<":
+            self.add_token(TokenType.LESS_EQUAL if self.match("=") else TokenType.LESS)
+        elif c == ">":
+            self.add_token(
+                TokenType.GREATER_EQUAL if self.match("=") else TokenType.GREATER
+            )
+        elif c == "/":
+            if match("/"):  # a comment, consume till \n
+                while not self.at_end() and self.peek() != "\n":
                     self.advance()
             else:
                 add_token(TokenType.SLASH)
-        elif c == ' ': pass
-        elif c == '\r': pass
-        elif c == '\t': pass
-        elif c == '\n': line += 1
-        elif c == '"': self.string()
-        elif c.isdigit(): self.number()
-        elif self.isalpha(c): self.identifier()
+        elif c == " ":
+            pass
+        elif c == "\r":
+            pass
+        elif c == "\t":
+            pass
+        elif c == "\n":
+            line += 1
+        elif c == '"':
+            self.string()
+        elif c.isdigit():
+            self.number()
+        elif self.isalpha(c):
+            self.identifier()
         else:
-            lox.error(self.line, f'Unexpected character {c}.')
-
+            lox.error(self.line, f"Unexpected character {c}.")
 
     def add_token(self, type, literal=None):
-        text = self.source[self.start:self.current]
+        text = self.source[self.start : self.current]
         self.tokens.append(Token(type, text, literal, self.line))
 
     def at_end(self):
@@ -93,17 +118,17 @@ class Scanner:
 
     def peek(self):
         if self.at_end():
-            return '\0'
+            return "\0"
         return self.source[self.current]
 
     def peek_next(self):
         if self.current + 1 >= len(self.source):
-            return '\0'
+            return "\0"
         return self.source[self.current + 1]
 
     def string(self):
         while not self.at_end() and self.peek() != '"':
-            if self.peek() == '\n':   # multi line comments
+            if self.peek() == "\n":  # multi line comments
                 self.line += 1
             self.advance()
 
@@ -112,7 +137,7 @@ class Scanner:
             return
 
         self.advance()  # final "
-        literal = self.source[self.start + 1: self.current - 1]
+        literal = self.source[self.start + 1 : self.current - 1]
         self.add_token(TokenType.STRING, literal)
 
     def number(self):
@@ -122,11 +147,11 @@ class Scanner:
 
         consume_digits()
 
-        if self.peek() == '.' and self.peek_next().isdigit():
+        if self.peek() == "." and self.peek_next().isdigit():
             self.advance()
             consume_digits()
 
-        literal = float(self.source[self.start: self.current])
+        literal = float(self.source[self.start : self.current])
         self.add_token(TokenType.NUMBER, literal)
 
     def identifier(self):
@@ -138,7 +163,7 @@ class Scanner:
         self.add_token(type)
 
     def isalpha(self, ch):
-        return ch.isalpha() or ch == '_'
+        return ch.isalpha() or ch == "_"
 
     def isalnum(self, ch):
-        return ch.isalnum() or ch == '_'
+        return ch.isalnum() or ch == "_"

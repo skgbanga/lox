@@ -1,4 +1,4 @@
-'''
+"""
  == simple grammar ==
 expression     → literal
                | unary
@@ -32,10 +32,15 @@ unary          → ( "!" | "-"  ) unary
                | primary
 primary        → NUMBER | STRING | "true" | "false" | "nil"
               | "(" expression ")"
-'''
+"""
 
 from tokens import *
 from expressions import *
+import lox
+
+
+class ParseError(Exception):
+    pass
 
 
 class Parser:
@@ -43,9 +48,14 @@ class Parser:
         self.tokens = tokens
         self.current = 0
 
+    def parse(self):
+        try:
+            return self.expression()
+        except ParseError:
+            return None
+
     def expression(self):
         return self.equality()
-
 
     def equality(self):
         expr = self.comparison()
@@ -56,10 +66,14 @@ class Parser:
 
         return expr
 
-
     def comparison(self):
         expr = self.term()
-        while self.match(TokenType.LESS, TokenType.LESS_EQUAL, TokenType.GREATER, TokenType.GREATER_EQUAL):
+        while self.match(
+            TokenType.LESS,
+            TokenType.LESS_EQUAL,
+            TokenType.GREATER,
+            TokenType.GREATER_EQUAL,
+        ):
             op = self.previous()
             right = self.term()
             expr = BinaryExpr(expr, op, right)
@@ -75,7 +89,7 @@ class Parser:
 
         return expr
 
-    def fator(self):
+    def factor(self):
         expr = self.unary()
         while self.match(TokenType.STAR, TokenType.SLASH):
             op = self.previous()
@@ -93,8 +107,32 @@ class Parser:
         return self.primary()
 
     def primary(self):
-        if match(TokenType.FALSE)
+        if self.match(TokenType.FALSE):
+            return LiteralExpr(False)
+        if self.match(TokenType.TRUE):
+            return LiteralExpr(True)
+        if self.match(TokenType.NIL):
+            return LiteralExpr(None)
+        if self.match(TokenType.NUMBER, TokenType.STRING):
+            return LiteralExpr(self.previous().literal)
 
+        if self.match(TokenType.LEFT_PAREN):
+            expr = self.expression()
+            self.consume(TokenType.RIGHT_PAREN, "Expect ')' after expression.")
+            return GroupingExpr(expr)
+
+        raise self.error(self.peek(), "Expect expression.")
+
+    def consume(self, type, msg):
+        if self.check(type):
+            self.advance()
+            return
+
+        raise self.error(self.peek(), msg)
+
+    def error(self, token, msg):
+        lox.parsing_error(token, msg)
+        return ParseError()
 
     def match(self, *types):
         for type in types:
@@ -104,7 +142,7 @@ class Parser:
         return False
 
     def peek(self):
-        if self.tokens[self.current]
+        return self.tokens[self.current]
 
     def at_end(self):
         return self.peek().type == TokenType.EOF
@@ -121,4 +159,3 @@ class Parser:
 
     def previous(self):
         return self.tokens[self.current - 1]
-

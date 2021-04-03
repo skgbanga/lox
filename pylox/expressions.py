@@ -1,19 +1,18 @@
 from abc import abstractmethod, ABC
 
 expression_types = [
-        "literal",
-        "unary",
-        "binary",
-        "grouping",
-
-        "assign",
-        "call",
-        "get",
-        "logical",
-        "set",
-        "super",
-        "this",
-        "variable"
+    "literal",
+    "unary",
+    "binary",
+    "grouping",
+    "assign",
+    "call",
+    "get",
+    "logical",
+    "set",
+    "super",
+    "this",
+    "variable",
 ]
 
 
@@ -48,6 +47,7 @@ class BinaryExpr(Expr):
 
     def accept(self, visitor):
         return visitor.visit_binary_expr(self)
+
 
 class GroupingExpr(Expr):
     def __init__(self, expr):

@@ -1,6 +1,4 @@
-from expressions import *
 from tokens import *
-
 
 class ASTPrinter:
     def print(self, expr):
@@ -21,18 +19,17 @@ class ASTPrinter:
         return self.parenthesize("group", expr.expr)
 
     def parenthesize(self, name, *exprs):
-        s = ' '.join(expr.accept(self) for expr in exprs)
-        return f'({name} {s})'
+        s = " ".join(expr.accept(self) for expr in exprs)
+        return f"({name} {s})"
 
 
-if __name__ == '__main__':
-    expr = BinaryExpr(
-            UnaryExpr(
-                Token(TokenType.MINUS, "-", None, 1),
-                LiteralExpr(123)
-            ),
-            Token(TokenType.STAR, "*", None, 1),
-            GroupingExpr(LiteralExpr(20.2))
-           )
+if __name__ == "__main__":
+    from scanner import Scanner
+    from parser import Parser
+
+    code = "3 + 4 * 5 - 5 == 5 > 8 < -10"
+    tokens = Scanner(code).scan_tokens()
+    expr = Parser(tokens).parse()
+
     s = ASTPrinter().print(expr)
     print(s)

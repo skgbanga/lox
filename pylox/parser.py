@@ -1,18 +1,4 @@
 """
- == simple grammar ==
-expression     → literal
-               | unary
-               | binary
-               | grouping ;
-
-literal        → NUMBER | STRING | "true" | "false" | "nil" ;
-unary          → ( "-" | "!" ) expression ;
-binary         → expression operator expression ;
-grouping       → "(" expression ")" ;
-operator       → "==" | "!=" | "<" | "<=" | ">" | ">="
-               | "+"  | "-"  | "*" | "/" ;
-
-
  == precedence/associativity for operators ==
 Name            Operators       Associates
 Equality        == !=           Left
@@ -22,7 +8,7 @@ Factor          / *             Left
 Unary           ! -             Right
 
 
- == Bake precedence into grammar == 
+ == grammar == 
 expression     → equality
 equality       → comparison ( ( "!=" | "=="  ) comparison  )*
 comparison     → term ( ( ">" | ">=" | "<" | "<="  ) term  )*

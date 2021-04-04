@@ -9,12 +9,15 @@ class RunTimeError(Exception):
 
 
 class Interpreter:
-    def interpret(self, ):
+    def interpret(self, statements):
         try:
-            value = self.evaluate(expr)
-            print(self.stringify(value))
+            for statement in statements:
+                self.execute(statement)
         except RunTimeError as ex:
             lox.runtime_error(ex)
+
+    def execute(self, stmt):
+        stmt.accept(self)
 
     def evaluate(self, expr):
         return expr.accept(self)

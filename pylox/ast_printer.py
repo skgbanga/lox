@@ -27,9 +27,12 @@ if __name__ == "__main__":
     from scanner import Scanner
     from parser import Parser
 
-    code = "3 + 4 * 5 - 5 == 5 > 8 < -10"
+    # code = "3 + 4 * 5 - 5 == 5 > 8 < -10"
+    code = "3 + "
     tokens = Scanner(code).scan_tokens()
+    # print(tokens)
     expr = Parser(tokens).parse()
 
+    assert expr is not None
     s = ASTPrinter().print(expr)
     print(s)

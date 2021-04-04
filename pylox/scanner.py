@@ -71,11 +71,11 @@ class Scanner:
                 TokenType.GREATER_EQUAL if self.match("=") else TokenType.GREATER
             )
         elif c == "/":
-            if match("/"):  # a comment, consume till \n
+            if self.match("/"):  # a comment, consume till \n
                 while not self.at_end() and self.peek() != "\n":
                     self.advance()
             else:
-                add_token(TokenType.SLASH)
+                self.add_token(TokenType.SLASH)
         elif c == " ":
             pass
         elif c == "\r":
@@ -91,7 +91,7 @@ class Scanner:
         elif self.isalpha(c):
             self.identifier()
         else:
-            lox.error(self.line, f"Unexpected character {c}.")
+            lox.error(self.line, f"Unexpected character '{c}'.")
 
     def add_token(self, type, literal=None):
         text = self.source[self.start : self.current]

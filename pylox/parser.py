@@ -32,6 +32,14 @@ unary          → ( "!" | "-"  ) unary
                | primary
 primary        → NUMBER | STRING | "true" | "false" | "nil"
               | "(" expression ")"
+
+program        → statement* EOF ;
+
+statement      → exprStmt
+               | printStmt ;
+
+exprStmt       → expression ";" ;
+printStmt      → "print" expression ";" ;
 """
 
 from tokens import *
@@ -49,10 +57,26 @@ class Parser:
         self.current = 0
 
     def parse(self):
-        try:
-            return self.expression()
-        except ParseError:
-            return None
+        statements = []
+        while not self.at_end():
+            statements.add(self.statement())
+
+        return statements
+
+    def statement(self):
+        if self.match(TokenType.PRINT):
+            return self.print_statement()
+        return self.expression_statement()
+
+    def print_statement():
+        expr = self.expression()
+        self.consume(TokenType.SEMICOLON, "Expect ';' after value")
+        return PrintStmt(expr)
+
+    def expression_statement():
+        expr = self.expression()
+        self.consume(TokenType.SEMICOLON, "Expect ';' after expression")
+        return ExpressionStmt(expr)
 
     def expression(self):
         return self.equality()

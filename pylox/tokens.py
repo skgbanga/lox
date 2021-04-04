@@ -60,3 +60,6 @@ class Token:
 
     def __str__(self):
         return f"{self.type} {self.lexeme} {self.literal}"
+
+    def __repr__(self):
+        return f'Token({self.type}, {self.lexeme}, {self.literal}, {self.line})'

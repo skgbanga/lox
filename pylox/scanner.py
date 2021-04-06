@@ -1,5 +1,5 @@
 from tokens import *
-import lox
+from lox import Lox
 
 
 class Scanner:
@@ -91,7 +91,7 @@ class Scanner:
         elif self.isalpha(c):
             self.identifier()
         else:
-            lox.error(self.line, f"Unexpected character '{c}'.")
+            Lox.error(self.line, f"Unexpected character '{c}'.")
 
     def add_token(self, type, literal=None):
         text = self.source[self.start : self.current]
@@ -133,7 +133,7 @@ class Scanner:
             self.advance()
 
         if self.at_end():
-            lox.error(line, "Unterminated string.")
+            Lox.error(line, "Unterminated string.")
             return
 
         self.advance()  # final "

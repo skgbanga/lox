@@ -55,3 +55,20 @@ class GroupingExpr(Expr):
 
     def accept(self, visitor):
         return visitor.visit_grouping_expr(self)
+
+
+class VariableExpr(Expr):
+    def __init__(self, name):
+        self.name = name
+
+    def accept(self, visitor):
+        return visitor.visit_variable_expr(self)
+
+
+class AssignExpr(Expr):
+    def __init__(self, name, expr):
+        self.name = name
+        self.expr = expr
+
+    def accept(self, visitor):
+        return visitor.visit_assign_expr(self)

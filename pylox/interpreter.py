@@ -1,4 +1,4 @@
-import lox
+from lox import Lox
 from tokens import *
 
 
@@ -7,18 +7,56 @@ class RunTimeError(Exception):
         super().__init__(msg)
         self.token = token
 
+class Environment:
+    def __init__(self):
+        self.values = {}
+
+    def define(self, name, value):
+        self.values[name] = value
+
+    def assign(self, name, value):
+        if name.lexeme not in self.values:
+            raise RunTimeError(name, f"Undefined variable '{name.lexeme}'.")
+
+        self.values[name.lexeme] = value
+
+    def get(self, name):
+        if name.lexeme in self.values:
+            return self.values[name.lexeme]
+
+        raise RunTimeError(name, f"Undefined variable '{name.lexeme}'.")
+
 
 class Interpreter:
+    def __init__(self):
+        self.env = Environment()
+
     def interpret(self, statements):
         try:
             for statement in statements:
                 self.execute(statement)
         except RunTimeError as ex:
-            lox.runtime_error(ex)
+            Lox.runtime_error(ex)
 
+    # statements
     def execute(self, stmt):
         stmt.accept(self)
 
+    def visit_print_stmt(self, stmt):
+        value = self.evaluate(stmt.expr)
+        print(self.stringify(value))
+
+    def visit_expr_stmt(self, stmt):
+        value = self.evaluate(stmt.expr)
+
+    def visit_var_stmt(self, stmt):
+        value = None
+        if stmt.expr:
+            value = self.evaluate(stmt.expr)
+
+        self.env.define(stmt.name.lexeme, value)
+
+    # expressions
     def evaluate(self, expr):
         return expr.accept(self)
 
@@ -80,6 +118,14 @@ class Interpreter:
             return left == right
         if op.type != TokenType.BANG_EQUAL:
             return left != right
+
+    def visit_variable_expr(self, expr):
+        return self.env.get(expr.name)
+
+    def visit_assign_expr(self, expr):
+        value = self.evaluate(expr.expr)
+        self.env.assign(expr.name, value)
+        return value
 
     def is_truthy(self, value):
         # false and nil are falsey, and everything else is truthy.

@@ -1,15 +1,25 @@
 """
- == precedence/associativity for operators ==
-Name            Operators       Associates
-Equality        == !=           Left
-Comparison      > >= < <=       Left
-Term            - +             Left
-Factor          / *             Left
-Unary           ! -             Right
+
+ == GRAMMAR == 
+
+program        → declaration* EOF
+
+declaration    → varDecl
+               | statement
+
+varDecl        → "var" IDENTIFIER ( "=" expression  )? ";"
+statement      → exprStmt
+               | printStmt
+
+exprStmt       → expression ";"
+printStmt      → "print" expression ";"
 
 
- == grammar == 
-expression     → equality
+# == expressions
+# might seem weird but assignment is an expression with lowest precedence
+expression     → assignment ;
+assignment     → IDENTIFIER "=" assignment
+                | equality ;
 equality       → comparison ( ( "!=" | "=="  ) comparison  )*
 comparison     → term ( ( ">" | ">=" | "<" | "<="  ) term  )*
 term           → factor ( ( "-" | "+"  ) factor  )*
@@ -17,21 +27,14 @@ factor         → unary ( ( "/" | "*"  ) unary  )*
 unary          → ( "!" | "-"  ) unary
                | primary
 primary        → NUMBER | STRING | "true" | "false" | "nil"
-              | "(" expression ")"
+              | "(" expression ")" | IDENTIFIER
 
-program        → statement* EOF ;
-
-statement      → exprStmt
-               | printStmt ;
-
-exprStmt       → expression ";" ;
-printStmt      → "print" expression ";" ;
 """
 
 from tokens import *
 from expressions import *
-import lox
-
+from statements import *
+from lox import Lox
 
 class ParseError(Exception):
     pass
@@ -45,27 +48,59 @@ class Parser:
     def parse(self):
         statements = []
         while not self.at_end():
-            statements.add(self.statement())
+            statements.append(self.declaration())
 
         return statements
+
+    def declaration(self):
+        try:
+            if self.match(TokenType.VAR):
+                return self.var_declaration()
+
+            return self.statement()
+        except ParseError:
+            self.synchronize()
+
+    def var_declaration(self):
+        name = self.consume(TokenType.IDENTIFIER, "Expect variable name.")
+        expr = None
+        if self.match(TokenType.EQUAL):
+            expr = self.expression()
+
+        self.consume(TokenType.SEMICOLON, "Expect ';' after variable declaration")
+        return VarStmt(name, expr)
+
 
     def statement(self):
         if self.match(TokenType.PRINT):
             return self.print_statement()
+
         return self.expression_statement()
 
-    def print_statement():
+    def print_statement(self):
         expr = self.expression()
         self.consume(TokenType.SEMICOLON, "Expect ';' after value")
         return PrintStmt(expr)
 
-    def expression_statement():
+    def expression_statement(self):
         expr = self.expression()
         self.consume(TokenType.SEMICOLON, "Expect ';' after expression")
         return ExpressionStmt(expr)
 
     def expression(self):
-        return self.equality()
+        return self.assignment()
+
+    def assignment(self):
+        expr = self.equality()
+        if self.match(TokenType.EQUAL):
+            equals = self.previous()
+            right = self.assignment()  # right associative
+            if isinstance(expr, VariableExpr):
+                return AssignExpr(expr.name, right)
+
+            self.error(equals, 'Invalid assignment target.')
+
+        return expr
 
     def equality(self):
         expr = self.comparison()
@@ -125,7 +160,8 @@ class Parser:
             return LiteralExpr(None)
         if self.match(TokenType.NUMBER, TokenType.STRING):
             return LiteralExpr(self.previous().literal)
-
+        if self.match(TokenType.IDENTIFIER):
+            return VariableExpr(self.previous())
         if self.match(TokenType.LEFT_PAREN):
             expr = self.expression()
             self.consume(TokenType.RIGHT_PAREN, "Expect ')' after expression.")
@@ -136,12 +172,12 @@ class Parser:
     def consume(self, type, msg):
         if self.check(type):
             self.advance()
-            return
+            return self.previous()
 
         raise self.error(self.peek(), msg)
 
     def error(self, token, msg):
-        lox.parsing_error(token, msg)
+        Lox.parsing_error(token, msg)
         return ParseError()
 
     def match(self, *types):
@@ -169,3 +205,22 @@ class Parser:
 
     def previous(self):
         return self.tokens[self.current - 1]
+
+
+    def synchronize(self):
+        self.advance()
+
+        ok = set([
+            TokenType.CLASS, TokenType.FUN, TokenType.VAR, TokenType.FOR,
+            TokenType.IF, TokenType.WHILE, TokenType.PRINT, TokenType.RETURN
+            ])
+
+        while not self.at_end():
+            if self.previous().type == TokenType.SEMICOLON:
+                return
+
+            type = self.peek().type
+            if type in ok:
+                return
+
+            self.advance()

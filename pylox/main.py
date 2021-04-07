@@ -6,14 +6,21 @@ if __name__ == "__main__":
     if len(args) > 2:
         print("Usage: ./lox [script]")
         sys.exit(64)
-    if len(args) == 2:
-        # add file reading support
-        pass
-    else:
-        from scanner import Scanner
-        from parser import Parser, ParseError
-        from interpreter import Interpreter
 
+    from scanner import Scanner
+    from parser import Parser, ParseError
+    from interpreter import Interpreter
+
+    if len(args) == 2:
+        filename = args[1]
+        with open(filename, 'r') as f:
+            data = f.read()
+
+        tokens = Scanner(data).scan_tokens()
+        statements = Parser(tokens).parse()
+        if not Lox.had_error:
+            Interpreter().interpret(statements)
+    else:
         print("Lox 0.1.0")
         interpreter = Interpreter()
         try:

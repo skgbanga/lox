@@ -8,21 +8,29 @@ class RunTimeError(Exception):
         self.token = token
 
 class Environment:
-    def __init__(self):
+    def __init__(self, enclosing=None):
         self.values = {}
+        self.enclosing = enclosing
 
     def define(self, name, value):
         self.values[name] = value
 
     def assign(self, name, value):
-        if name.lexeme not in self.values:
-            raise RunTimeError(name, f"Undefined variable '{name.lexeme}'.")
+        if name.lexeme in self.values:
+            self.values[name.lexeme] = value
+            return
 
-        self.values[name.lexeme] = value
+        if self.enclosing:
+            self.enclosing.assign(name, value)
+
+        raise RunTimeError(name, f"Undefined variable '{name.lexeme}'.")
 
     def get(self, name):
         if name.lexeme in self.values:
             return self.values[name.lexeme]
+
+        if self.enclosing:
+            return self.enclosing.get(name)
 
         raise RunTimeError(name, f"Undefined variable '{name.lexeme}'.")
 
@@ -37,6 +45,8 @@ class Interpreter:
                 self.execute(statement)
         except RunTimeError as ex:
             Lox.runtime_error(ex)
+        except AssertError  as ex:
+            Lox.failed_assertion(ex)
 
     # statements
     def execute(self, stmt):
@@ -45,6 +55,11 @@ class Interpreter:
     def visit_print_stmt(self, stmt):
         value = self.evaluate(stmt.expr)
         print(self.stringify(value))
+
+    def visit_assert_stmt(self, stmt):
+        value = self.evaluate(stmt.expr)
+        if not self.is_truthy(value):
+            raise RunTimeError(stmt.token, "Assert Failed.")
 
     def visit_expr_stmt(self, stmt):
         value = self.evaluate(stmt.expr)
@@ -55,6 +70,27 @@ class Interpreter:
             value = self.evaluate(stmt.expr)
 
         self.env.define(stmt.name.lexeme, value)
+
+    def visit_block_stmt(self, stmt):
+        self.execute_block(stmt.stmts, Environment(self.env))
+
+    def execute_block(self, stmts, env):
+        previous = self.env
+        try:
+            self.env = env
+            for stmt in stmts:
+                self.execute(stmt)
+        finally:
+            self.env = previous
+
+    def visit_if_statement(self, stmt):
+        value = self.evaluate(stmt.condition)
+        if self.is_truthy(value):
+            self.execute(stmt.then)
+        else:
+            if stmt.otherwise:
+                self.execute(stmt.otherwise)
+
 
     # expressions
     def evaluate(self, expr):

@@ -12,6 +12,14 @@ class PrintStmt(Stmt):
     def accept(self, visitor):
         return visitor.visit_print_stmt(self)
 
+class AssertStmt(Stmt):
+    def __init__(self, token, expr):
+        self.token = token  # for printing line number
+        self.expr = expr
+    
+    def accept(self, visitor):
+        return visitor.visit_assert_stmt(self)
+
 
 class ExpressionStmt(Stmt):
     def __init__(self, expr):
@@ -28,3 +36,21 @@ class VarStmt(Stmt):
 
     def accept(self, visitor):
         return visitor.visit_var_stmt(self)
+
+
+class BlockStmt(Stmt):
+    def __init__(self, stmts):
+        self.stmts = stmts
+
+    def accept(self, visitor):
+        return visitor.visit_block_stmt(self)
+
+
+class IfStmt(Stmt):
+    def __init__(self, condition, then, otherwise):
+        self.condition = condition
+        self.then = then
+        self.otherwise = otherwise
+
+    def accept(self, visitor):
+        return visitor.visit_if_statement(self)

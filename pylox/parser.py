@@ -10,9 +10,16 @@ declaration    → varDecl
 varDecl        → "var" IDENTIFIER ( "=" expression  )? ";"
 statement      → exprStmt
                | printStmt
+               | assertStmt
+               | block
+               | ifStmt
 
 exprStmt       → expression ";"
 printStmt      → "print" expression ";"
+assertStmt     → "assert" expression ";"
+block          → "{" declaration* "}"
+ifStmt         → "if" "(" expression ")" statement
+               ( "else" statement  )? ;
 
 
 # == expressions
@@ -74,6 +81,12 @@ class Parser:
     def statement(self):
         if self.match(TokenType.PRINT):
             return self.print_statement()
+        if self.match(TokenType.ASSERT):
+            return self.assert_statement()
+        if self.match(TokenType.LEFT_BRACE):
+            return self.block_statement()
+        if self.match(TokenType.IF):
+            return self.if_statement()
 
         return self.expression_statement()
 
@@ -81,6 +94,33 @@ class Parser:
         expr = self.expression()
         self.consume(TokenType.SEMICOLON, "Expect ';' after value")
         return PrintStmt(expr)
+
+    def assert_statement(self):
+        token = self.previous()
+        expr = self.expression()
+        self.consume(TokenType.SEMICOLON, "Expect ';' after value")
+        return AssertStmt(token, expr)
+
+    def block_statement(self):
+        stmts = []
+        while not self.at_end() and not self.check(TokenType.RIGHT_BRACE):
+            stmts.append(self.declaration())
+
+        self.consume(TokenType.RIGHT_BRACE, "Expect '}' after block.")
+        return BlockStmt(stmts)
+
+    def if_statement(self):
+        self.consume(TokenType.LEFT_PARENT, "Expect '(' after 'if'.")
+        condition = self.expression()
+        self.consume(TokenType.RIGHT_PARENT, "Expect ')' after 'if' condition.")
+
+        then = self.statement()
+        otherwise = None
+        if self.match(TokenType.ELSE):
+            otherwise = self.statement()
+
+        return IfStmt(condition, then, otherwise)
+
 
     def expression_statement(self):
         expr = self.expression()

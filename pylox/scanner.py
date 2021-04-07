@@ -19,6 +19,7 @@ class Scanner:
             "nil": TokenType.NIL,
             "or": TokenType.OR,
             "print": TokenType.PRINT,
+            "assert": TokenType.ASSERT,
             "return": TokenType.RETURN,
             "super": TokenType.SUPER,
             "this": TokenType.THIS,
@@ -83,7 +84,7 @@ class Scanner:
         elif c == "\t":
             pass
         elif c == "\n":
-            line += 1
+            self.line += 1
         elif c == '"':
             self.string()
         elif c.isdigit():

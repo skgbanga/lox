@@ -41,6 +41,7 @@ class TokenType(Enum):
     NIL = auto()
     OR = auto()
     PRINT = auto()
+    ASSERT = auto()
     RETURN = auto()
     SUPER = auto()
     THIS = auto()

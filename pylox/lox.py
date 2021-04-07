@@ -3,6 +3,7 @@ import sys
 class Lox:
     had_error = False
     had_runtime_error = False
+    had_assert_error = False
 
     @staticmethod
     def error(line, msg):
@@ -17,12 +18,15 @@ class Lox:
         else:
             Lox.report(token.line, "at '" + token.lexeme + "'", msg)
 
-
     @staticmethod
     def runtime_error(error):
-        print(error.args[0] + f"\n[line {error.token.line}]")
+        print(f"[line {error.token.line}] {error.args[0]}")
         Lox.had_runtime_error = True
 
+    @staticmethod
+    def failed_assert(error):
+        print(f"[line {error.token.line}] {error.args[0]}")
+        Lox.had_assert_error = True
 
     @staticmethod
     def report(line, where, msg):

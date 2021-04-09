@@ -10,23 +10,24 @@ class Scanner:
         self.current = 0
         self.line = 1
         self.keywords = {
-            "and": TokenType.AND,
-            "class": TokenType.CLASS,
-            "else": TokenType.ELSE,
-            "for": TokenType.FOR,
-            "fun": TokenType.FUN,
-            "if": TokenType.IF,
             "nil": TokenType.NIL,
-            "or": TokenType.OR,
-            "print": TokenType.PRINT,
-            "assert": TokenType.ASSERT,
-            "return": TokenType.RETURN,
-            "super": TokenType.SUPER,
-            "this": TokenType.THIS,
             "true": TokenType.TRUE,
             "false": TokenType.FALSE,
             "var": TokenType.VAR,
+            "print": TokenType.PRINT,
+            "assert": TokenType.ASSERT,
+            "if": TokenType.IF,
+            "else": TokenType.ELSE,
+            "and": TokenType.AND,
+            "or": TokenType.OR,
             "while": TokenType.WHILE,
+            "for": TokenType.FOR,
+
+            "class": TokenType.CLASS,
+            "fun": TokenType.FUN,
+            "return": TokenType.RETURN,
+            "super": TokenType.SUPER,
+            "this": TokenType.THIS,
         }
 
     def scan_tokens(self):

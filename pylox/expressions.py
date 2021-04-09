@@ -48,6 +48,14 @@ class BinaryExpr(Expr):
     def accept(self, visitor):
         return visitor.visit_binary_expr(self)
 
+class LogicalExpr(Expr):
+    def __init__(self, left, op, right):
+        self.left = left
+        self.op = op
+        self.right = right
+
+    def accept(self, visitor):
+        return visitor.visit_logical_expr(self)
 
 class GroupingExpr(Expr):
     def __init__(self, expr):

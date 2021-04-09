@@ -21,7 +21,7 @@ class Environment:
             return
 
         if self.enclosing:
-            self.enclosing.assign(name, value)
+            return self.enclosing.assign(name, value)
 
         raise RunTimeError(name, f"Undefined variable '{name.lexeme}'.")
 
@@ -91,6 +91,9 @@ class Interpreter:
             if stmt.otherwise:
                 self.execute(stmt.otherwise)
 
+    def visit_while_statement(self, stmt):
+        while self.is_truthy(self.evaluate(stmt.condition)):
+            self.execute(stmt.stmt)
 
     # expressions
     def evaluate(self, expr):
@@ -154,6 +157,16 @@ class Interpreter:
             return left == right
         if op.type != TokenType.BANG_EQUAL:
             return left != right
+
+    def visit_logical_expr(self, expr):
+        left = self.evaluate(expr.left)
+        truthy = self.is_truthy(left)
+        op = expr.op
+        if op.type == TokenType.OR and truthy or op.type == TokenType.AND and not truthy:
+            return left
+
+        return self.evaluate(expr.right)
+
 
     def visit_variable_expr(self, expr):
         return self.env.get(expr.name)

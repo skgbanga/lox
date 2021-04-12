@@ -10,6 +10,7 @@ if __name__ == "__main__":
     from scanner import Scanner
     from parser import Parser, ParseError
     from interpreter import Interpreter
+    from resolver import Resolver
 
     if len(args) == 2:
         filename = args[1]
@@ -19,7 +20,10 @@ if __name__ == "__main__":
         tokens = Scanner(data).scan_tokens()
         statements = Parser(tokens).parse()
         if not Lox.had_error:
-            Interpreter().interpret(statements)
+            interpreter = Interpreter()
+            Resolver(interpreter).resolve(statements)
+            if not Lox.had_error:
+                interpreter.interpret(statements)
     else:
         print("Lox 0.1.0")
         interpreter = Interpreter()
@@ -29,7 +33,9 @@ if __name__ == "__main__":
                 tokens = Scanner(line).scan_tokens()
                 statements = Parser(tokens).parse()
                 if not Lox.had_error:
-                    interpreter.interpret(statements)
+                    Resolver(interpreter).resolve(statements)
+                    if not Lox.had_error:
+                        interpreter.interpret(statements)
 
                 Lox.had_error = False
         except EOFError:

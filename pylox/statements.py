@@ -63,3 +63,21 @@ class WhileStmt(Stmt):
 
     def accept(self, visitor):
         return visitor.visit_while_statement(self)
+
+class FuncStmt(Stmt):
+    def __init__(self, name, params, body):
+        self.name = name
+        self.params = params
+        self.body = body
+
+    def accept(self, visitor):
+        return visitor.visit_func_statement(self)
+
+
+class ReturnStmt(Stmt):
+    def __init__(self, keyword, expr):
+        self.keyword = keyword
+        self.expr = expr
+
+    def accept(self, visitor):
+        return visitor.visit_return_statement(self)

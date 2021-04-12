@@ -6,8 +6,8 @@ class Lox:
     had_assert_error = False
 
     @staticmethod
-    def error(line, msg):
-        Lox.report(line, "", msg)
+    def error(token, msg):
+        Lox.report(token.line, "", msg)
 
     @staticmethod
     def parsing_error(token, msg):
@@ -22,11 +22,6 @@ class Lox:
     def runtime_error(error):
         print(f"[line {error.token.line}] {error.args[0]}")
         Lox.had_runtime_error = True
-
-    @staticmethod
-    def failed_assert(error):
-        print(f"[line {error.token.line}] {error.args[0]}")
-        Lox.had_assert_error = True
 
     @staticmethod
     def report(line, where, msg):

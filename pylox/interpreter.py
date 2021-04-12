@@ -1,11 +1,17 @@
 from lox import Lox
 from tokens import *
+from loxcallable import LoxCallable
 
 
 class RunTimeError(Exception):
     def __init__(self, token, msg):
         super().__init__(msg)
         self.token = token
+
+
+class Return(Exception):
+    def __init__(self, value):
+        self.value = value
 
 class Environment:
     def __init__(self, enclosing=None):
@@ -25,6 +31,9 @@ class Environment:
 
         raise RunTimeError(name, f"Undefined variable '{name.lexeme}'.")
 
+    def assign_at(self, depth, name, value):
+        self.ancestor(depth).values[name.lexeme] = value
+
     def get(self, name):
         if name.lexeme in self.values:
             return self.values[name.lexeme]
@@ -34,10 +43,48 @@ class Environment:
 
         raise RunTimeError(name, f"Undefined variable '{name.lexeme}'.")
 
+    def get_at(self, depth, lexeme):
+        return self.ancestor(depth).values[lexeme]
+
+    def ancestor(self, depth):
+        env = self
+        for i in range(depth):
+            env = env.enclosing
+        return env
+
+class LoxFunction(LoxCallable):
+    def __init__(self, stmt, closure):
+        self.stmt = stmt
+        self.closure = closure
+
+    def arity(self):
+        return len(self.stmt.params)
+
+    def call(self, interpreter, args):
+        env = Environment(enclosing=self.closure)
+        for param, arg in zip(self.stmt.params, args): # strict zip
+            env.define(param.lexeme, arg)
+
+        try:
+            interpreter.execute_block(self.stmt.body, env)
+        except Return as ex:
+            return ex.value
+
 
 class Interpreter:
     def __init__(self):
-        self.env = Environment()
+        class Clock(LoxCallable):
+            def arity(self):
+                return 0
+
+            def call(self, _interpreter, _args):
+                import time
+                return time.time()
+
+        self.globals = Environment()
+        self.globals.define("clock", Clock())
+        self.env = self.globals
+        self.locals = {}
 
     def interpret(self, statements):
         try:
@@ -45,8 +92,15 @@ class Interpreter:
                 self.execute(statement)
         except RunTimeError as ex:
             Lox.runtime_error(ex)
-        except AssertError  as ex:
-            Lox.failed_assertion(ex)
+
+    def resolve(self, expr, depth):
+        self.locals[expr] = depth
+
+    def lookup_variable(self, name, expr):
+        depth = self.locals.get(expr)
+        if depth is not None:
+            return self.env.get_at(depth, name.lexeme)
+        return self.globals.get(name)
 
     # statements
     def execute(self, stmt):
@@ -94,6 +148,16 @@ class Interpreter:
     def visit_while_statement(self, stmt):
         while self.is_truthy(self.evaluate(stmt.condition)):
             self.execute(stmt.stmt)
+
+    def visit_func_statement(self, func):
+        self.env.define(func.name.lexeme, LoxFunction(func, self.env))
+
+    def visit_return_statement(self, stmt):
+        value = None
+        if stmt.expr:
+            value = self.evaluate(stmt.expr)
+
+        raise Return(value)
 
     # expressions
     def evaluate(self, expr):
@@ -169,12 +233,27 @@ class Interpreter:
 
 
     def visit_variable_expr(self, expr):
-        return self.env.get(expr.name)
+        return self.lookup_variable(expr.name, expr)
 
     def visit_assign_expr(self, expr):
         value = self.evaluate(expr.expr)
-        self.env.assign(expr.name, value)
+        depth = self.locals.get(expr)
+        if depth is not None:
+            self.env.assign_at(depth, expr.name, value)
+        else:
+            self.env.assign(expr.name, value)
+
         return value
+
+    def visit_call_expr(self, expr):
+        callee = self.evaluate(expr.callee)
+        if not hasattr(callee, "call"):
+            raise RunTimeError(expr.paren, "can only call functions.")
+
+        args = [self.evaluate(arg) for arg in expr.args]
+        if len(args) != callee.arity():
+            raise RunTimeError(expr.paren, f"Expected {callee.arity()} arguments, {len(args)} provided.")
+        return callee.call(self, args)
 
     def is_truthy(self, value):
         # false and nil are falsey, and everything else is truthy.

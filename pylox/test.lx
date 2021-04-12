@@ -47,3 +47,51 @@
   }
   assert accum == 45;
 }
+
+// for loop
+{
+  var accum = 0;
+  for (var i = 0; i < 10; i = i + 1) {
+    accum = accum + i;
+  }
+  assert accum == 45;
+}
+
+// functions
+fun fib(n) {
+  if (n == 0 or n == 1) {
+    return n;
+  }
+  return fib(n - 1) + fib(n - 2);
+}
+
+fun outer() {
+  var i = 10;
+  fun inner() {
+    return i + 10;
+  }
+  return inner;
+}
+
+{
+  var time = clock();
+  assert time > 0;
+
+  assert fib(10) == 55;
+  assert outer()() == 20;
+}
+
+// closures working correctly with scopes
+{
+  var a = 10;
+  {
+    fun foo() {
+      return a;
+    }
+    assert foo() == 10;
+    var a = 20;
+    assert foo() == 10;
+  }
+}
+
+print "All passed!";

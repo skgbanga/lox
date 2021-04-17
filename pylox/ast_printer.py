@@ -1,5 +1,6 @@
 from tokens import *
 
+
 class ASTPrinter:
     def print(self, expr):
         return expr.accept(self)

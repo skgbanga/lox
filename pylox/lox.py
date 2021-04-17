@@ -1,5 +1,6 @@
 import sys
 
+
 class Lox:
     had_error = False
     had_runtime_error = False

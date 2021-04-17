@@ -22,7 +22,6 @@ class Scanner:
             "or": TokenType.OR,
             "while": TokenType.WHILE,
             "for": TokenType.FOR,
-
             "class": TokenType.CLASS,
             "fun": TokenType.FUN,
             "return": TokenType.RETURN,

@@ -14,7 +14,7 @@ if __name__ == "__main__":
 
     if len(args) == 2:
         filename = args[1]
-        with open(filename, 'r') as f:
+        with open(filename, "r") as f:
             data = f.read()
 
         tokens = Scanner(data).scan_tokens()

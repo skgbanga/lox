@@ -48,6 +48,7 @@ class BinaryExpr(Expr):
     def accept(self, visitor):
         return visitor.visit_binary_expr(self)
 
+
 class LogicalExpr(Expr):
     def __init__(self, left, op, right):
         self.left = left
@@ -56,6 +57,7 @@ class LogicalExpr(Expr):
 
     def accept(self, visitor):
         return visitor.visit_logical_expr(self)
+
 
 class GroupingExpr(Expr):
     def __init__(self, expr):
@@ -90,3 +92,39 @@ class CallExpr(Expr):
 
     def accept(self, visitor):
         return visitor.visit_call_expr(self)
+
+
+class GetExpr(Expr):
+    def __init__(self, obj, name):
+        self.obj = obj
+        self.name = name
+
+    def accept(self, visitor):
+        return visitor.visit_get_expr(self)
+
+
+class SetExpr(Expr):
+    def __init__(self, obj, name, value):
+        self.obj = obj
+        self.name = name
+        self.value = value
+
+    def accept(self, visitor):
+        return visitor.visit_set_expr(self)
+
+
+class ThisExpr(Expr):
+    def __init__(self, keyword):
+        self.keyword = keyword
+
+    def accept(self, visitor):
+        return visitor.visit_this_expr(self)
+
+
+class SuperExpr(Expr):
+    def __init__(self, keyword, method):
+        self.keyword = keyword
+        self.method = method
+
+    def accept(self, visitor):
+        return visitor.visit_super_expr(self)

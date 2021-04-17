@@ -5,6 +5,14 @@ from lox import *
 class FunctionType(Enum):
     NONE = auto()
     FUNCTION = auto()
+    INITIALIZER = auto()
+    METHOD = auto()
+
+
+class ClassType(Enum):
+    NONE = auto()
+    CLASS = auto()
+    SUBCLASS = auto()
 
 
 class Resolver:
@@ -12,6 +20,7 @@ class Resolver:
         self.interpreter = interpreter
         self.scopes = []
         self.current_function = FunctionType.NONE
+        self.current_class = ClassType.NONE
 
     def resolve(self, stmts_or_exprs):
         if not isinstance(stmts_or_exprs, list):
@@ -36,6 +45,42 @@ class Resolver:
         self.declare(stmt.name)
         self.define(stmt.name)  # for recursive functions
         self.resolve_function(stmt, FunctionType.FUNCTION)
+
+    def visit_class_statement(self, stmt):
+        enclosing_class = self.current_class
+
+        self.current_class = ClassType.CLASS
+        self.declare(stmt.name)
+        self.define(stmt.name)
+
+        if stmt.supercls:
+            if stmt.name.lexeme == stmt.supercls.name.lexeme:
+                Lox.error(stmt.supercls.name, "A class can't inherit from itself.")
+                return
+
+            self.current_class = ClassType.SUBCLASS
+            self.resolve(stmt.supercls)
+
+        if stmt.supercls:
+            self.begin_scope()
+            self.scopes[-1]["super"] = True
+
+        self.begin_scope()
+        self.scopes[-1]["this"] = True
+        for method in stmt.methods:
+            type = (
+                FunctionType.INITIALIZER
+                if method.name.lexeme == "init"
+                else FunctionType.METHOD
+            )
+            self.resolve_function(method, FunctionType.METHOD)
+
+        self.end_scope()
+
+        if stmt.supercls:
+            self.end_scope()
+
+        self.current_class = enclosing_class
 
     # lame statements
     def visit_print_stmt(self, stmt):
@@ -63,6 +108,10 @@ class Resolver:
             return
 
         if stmt.expr:
+            if self.current_function == FunctionType.INITIALIZER:
+                Lox.error(stmt.keyword, "Can't return a value from an initializer")
+                return
+
             self.resolve(stmt.expr)
 
     # interesting expressions
@@ -98,6 +147,34 @@ class Resolver:
         self.resolve(expr.callee)
         for arg in expr.args:
             self.resolve(arg)
+
+    def visit_get_expr(self, expr):
+        self.resolve(expr.obj)
+        # we never resolve the property that we are trying to get
+        # that is dynamically looked from the object
+        # (properties are not statically checked in lox)
+
+    def visit_set_expr(self, expr):
+        self.resolve(expr.value)
+        self.resolve(expr.obj)
+        # likewise for set
+
+    def visit_this_expr(self, expr):
+        if self.current_class == ClassType.NONE:
+            Lox.error(expr.keyword, "can't use 'this' outside class")
+            return
+
+        self.resolve_local(expr, expr.keyword)
+
+    def visit_super_expr(self, expr):
+        if self.current_class == ClassType.NONE:
+            Lox.error(expr.keyword, "can't use 'super' outside of a class.")
+            return
+        elif self.current_class == ClassType.CLASS:
+            Lox.error(expr.keyword, "can't use 'super' in a class with no superclass.")
+            return
+
+        self.resolve_local(expr, expr.keyword)
 
     def begin_scope(self):
         self.scopes.append(dict())

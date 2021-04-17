@@ -63,4 +63,4 @@ class Token:
         return f"{self.type} {self.lexeme} {self.literal}"
 
     def __repr__(self):
-        return f'Token({self.type}, {self.lexeme}, {self.literal}, {self.line})'
+        return f"Token({self.type}, {self.lexeme}, {self.literal}, {self.line})"

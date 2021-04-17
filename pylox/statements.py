@@ -1,9 +1,11 @@
 from abc import abstractmethod, ABC
 
+
 class Stmt(ABC):
     @abstractmethod
     def accept(visitor):
         pass
+
 
 class PrintStmt(Stmt):
     def __init__(self, expr):
@@ -12,11 +14,12 @@ class PrintStmt(Stmt):
     def accept(self, visitor):
         return visitor.visit_print_stmt(self)
 
+
 class AssertStmt(Stmt):
     def __init__(self, token, expr):
         self.token = token  # for printing line number
         self.expr = expr
-    
+
     def accept(self, visitor):
         return visitor.visit_assert_stmt(self)
 
@@ -64,6 +67,7 @@ class WhileStmt(Stmt):
     def accept(self, visitor):
         return visitor.visit_while_statement(self)
 
+
 class FuncStmt(Stmt):
     def __init__(self, name, params, body):
         self.name = name
@@ -81,3 +85,13 @@ class ReturnStmt(Stmt):
 
     def accept(self, visitor):
         return visitor.visit_return_statement(self)
+
+
+class ClassStmt(Stmt):
+    def __init__(self, name, supercls, methods):
+        self.name = name
+        self.supercls = supercls
+        self.methods = methods
+
+    def accept(self, visitor):
+        return visitor.visit_class_statement(self)

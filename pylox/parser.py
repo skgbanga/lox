@@ -4,10 +4,12 @@
 
 program        → declaration* EOF
 
-declaration    → varDecl
+declaration    → classDecl
+               | varDecl
                | funcDecl
                | statement
 
+classDecl      → "class" IDENTIFIER ( "<" IDENTIFIER )? "{" function* "}" ;
 varDecl        → "var" IDENTIFIER ( "=" expression  )? ";"
 funDecl        → "fun" function ;
 function       → IDENTIFIER "(" parameters? ")" block ;
@@ -37,7 +39,7 @@ returnStmt     → "return" expression? ";" ;
 # == expressions
 # might seem weird but assignment is an expression with lowest precedence
 expression     → assignment ;
-assignment     → IDENTIFIER "=" assignment
+assignment     → (call ".")? IDENTIFIER "=" assignment
                | logic_or ;
 logic_or       → logic_and ( "or" logic_and  )* ;
 logic_and      → equality ( "and" equality  )* ;
@@ -46,10 +48,11 @@ comparison     → term ( ( ">" | ">=" | "<" | "<="  ) term  )*
 term           → factor ( ( "-" | "+"  ) factor  )*
 factor         → unary ( ( "/" | "*"  ) unary  )*
 unary          → ( "!" | "-"  ) unary | call
-call           → primary ( "(" arguments? ")"  )* ;
+call           → primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
 
 primary        → NUMBER | STRING | "true" | "false" | "nil"
-              | "(" expression ")" | IDENTIFIER
+                 | "(" expression ")" | IDENTIFIER
+                 | "super" "." IDENTIFIER
 arguments      → expression ( "," expression  )* ;
 
 """
@@ -58,6 +61,7 @@ from tokens import *
 from expressions import *
 from statements import *
 from lox import Lox
+
 
 class ParseError(Exception):
     pass
@@ -81,6 +85,8 @@ class Parser:
                 return self.var_declaration()
             if self.match(TokenType.FUN):
                 return self.func_declaration()
+            if self.match(TokenType.CLASS):
+                return self.class_declaration()
 
             return self.statement()
         except ParseError:
@@ -115,6 +121,20 @@ class Parser:
         self.consume(TokenType.RIGHT_PAREN, "Expect ')' after function params")
         return params
 
+    def class_declaration(self):
+        name = self.consume(TokenType.IDENTIFIER, "Expect class name.")
+        supercls = None
+        if self.match(TokenType.LESS):
+            self.consume(TokenType.IDENTIFIER, "Expect superclass name.")
+            supercls = VariableExpr(self.previous())
+
+        self.consume(TokenType.LEFT_BRACE, "Expect '{' after class name.")
+        funcs = []
+        while not self.check(TokenType.RIGHT_BRACE) and not self.at_end():
+            funcs.append(self.func_declaration())
+        self.consume(TokenType.RIGHT_BRACE, "Expect '}' after class body.")
+
+        return ClassStmt(name, supercls, funcs)
 
     def statement(self):
         if self.match(TokenType.PRINT):
@@ -170,7 +190,7 @@ class Parser:
         condition = self.expression()
         self.consume(TokenType.RIGHT_PAREN, "Expect ')' after 'if' condition.")
 
-        stmt  = self.statement()
+        stmt = self.statement()
         return WhileStmt(condition, stmt)
 
     def for_statement(self):
@@ -224,8 +244,10 @@ class Parser:
             right = self.assignment()  # right associative
             if isinstance(expr, VariableExpr):
                 return AssignExpr(expr.name, right)
+            elif isinstance(expr, GetExpr):
+                return SetExpr(expr.obj, expr.name, right)
 
-            self.error(equals, 'Invalid assignment target.')  # not an lvalue
+            self.error(equals, "Invalid assignment target.")  # not an lvalue
 
         return expr
 
@@ -299,8 +321,13 @@ class Parser:
         while True:
             if self.match(TokenType.LEFT_PAREN):
                 expr = self.finish_call(expr)
+            elif self.match(TokenType.DOT):
+                name = self.consume(
+                    TokenType.IDENTIFIER, "Expect property name after '.'"
+                )
+                expr = GetExpr(expr, name)
             else:
-                break;
+                break
 
         return expr
 
@@ -322,6 +349,8 @@ class Parser:
             return LiteralExpr(True)
         if self.match(TokenType.NIL):
             return LiteralExpr(None)
+        if self.match(TokenType.THIS):
+            return ThisExpr(self.previous())
         if self.match(TokenType.NUMBER, TokenType.STRING):
             return LiteralExpr(self.previous().literal)
         if self.match(TokenType.IDENTIFIER):
@@ -330,6 +359,13 @@ class Parser:
             expr = self.expression()
             self.consume(TokenType.RIGHT_PAREN, "Expect ')' after expression.")
             return GroupingExpr(expr)
+        if self.match(TokenType.SUPER):
+            keyword = self.previous()
+            self.consume(TokenType.DOT, "Expect '.' after super.")
+            method = self.consume(
+                TokenType.IDENTIFIER, "Expect superclass method name."
+            )
+            return SuperExpr(keyword, method)
 
         raise self.error(self.peek(), "Expect expression.")
 
@@ -370,14 +406,21 @@ class Parser:
     def previous(self):
         return self.tokens[self.current - 1]
 
-
     def synchronize(self):
         self.advance()
 
-        ok = set([
-            TokenType.CLASS, TokenType.FUN, TokenType.VAR, TokenType.FOR,
-            TokenType.IF, TokenType.WHILE, TokenType.PRINT, TokenType.RETURN
-            ])
+        ok = set(
+            [
+                TokenType.CLASS,
+                TokenType.FUN,
+                TokenType.VAR,
+                TokenType.FOR,
+                TokenType.IF,
+                TokenType.WHILE,
+                TokenType.PRINT,
+                TokenType.RETURN,
+            ]
+        )
 
         while not self.at_end():
             if self.previous().type == TokenType.SEMICOLON:

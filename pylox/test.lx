@@ -94,4 +94,42 @@ fun outer() {
   }
 }
 
+// classes
+{
+  class Person {
+    init(first, second) {
+      this.first = first;
+      this.second = second;
+    }
+
+    full_name() {
+      return this.first + " " + this.second;
+    }
+  }
+
+  var person = Person("John", "Doe");
+  assert person.first = "John";
+  assert person.second = "Doe";
+  assert person.full_name() == "John Doe";
+
+  person.activity = "playing";
+  assert person.activity == "playing";
+}
+
+// inheritance
+{
+  class Base {
+    sum() { return 1; }
+    product() { return 10; }
+  }
+
+  class Derived < Base {
+    sum() { return super.sum() + 1; }
+  }
+
+  var d = Derived();
+  assert d.sum() == 2;
+  assert d.product() == 10;
+}
+
 print "All passed!";

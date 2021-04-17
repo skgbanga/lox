@@ -1,6 +1,5 @@
 from lox import Lox
 from tokens import *
-from loxcallable import LoxCallable
 
 
 class RunTimeError(Exception):
@@ -12,6 +11,7 @@ class RunTimeError(Exception):
 class Return(Exception):
     def __init__(self, value):
         self.value = value
+
 
 class Environment:
     def __init__(self, enclosing=None):
@@ -52,33 +52,97 @@ class Environment:
             env = env.enclosing
         return env
 
-class LoxFunction(LoxCallable):
-    def __init__(self, stmt, closure):
+
+class LoxFunction:
+    def __init__(self, stmt, closure, init):
         self.stmt = stmt
         self.closure = closure
+        self.init = init
 
     def arity(self):
         return len(self.stmt.params)
 
     def call(self, interpreter, args):
         env = Environment(enclosing=self.closure)
-        for param, arg in zip(self.stmt.params, args): # strict zip
+        for param, arg in zip(self.stmt.params, args):  # strict zip
             env.define(param.lexeme, arg)
 
         try:
             interpreter.execute_block(self.stmt.body, env)
         except Return as ex:
+            # in a construtor, we always want to return the object
+            if self.init:
+                return self.closure.get_at(0, "this")
             return ex.value
+
+        if self.init:
+            return self.closure.get_at(0, "this")
+
+    def bind(self, instance):
+        env = Environment(self.closure)
+        env.define("this", instance)
+        return LoxFunction(self.stmt, env, self.init)
+
+
+class LoxInstance:
+    def __init__(self, cls):
+        self.cls = cls
+        self.fields = {}
+
+    def get(self, name):
+        if name.lexeme in self.fields:
+            return self.fields[name.lexeme]
+
+        method = self.cls.get_method(name.lexeme)
+        if method:
+            return method.bind(self)
+
+        raise RunTimeError(name, f"Undefined property {name.lexeme}.")
+
+    def set(self, name, value):
+        self.fields[name.lexeme] = value
+
+
+class LoxClass:
+    def __init__(self, name, supercls, methods):
+        self.name = name
+        self.supercls = supercls
+        self.methods = methods
+
+    def get_method(self, name):
+        if name in self.methods:
+            return self.methods[name]
+
+        if self.supercls:
+            return self.supercls.get_method(name)
+
+        return None
+
+    def call(self, interpreter, args):
+        instance = LoxInstance(self)  # allocation
+        init = self.get_method("init")
+        if init:
+            init.bind(instance).call(interpreter, args)
+
+        return instance
+
+    def arity(self):
+        init = self.get_method("init")
+        if init:
+            return init.arity()
+
+        return 0
 
 
 class Interpreter:
     def __init__(self):
-        class Clock(LoxCallable):
+        class Clock:
             def arity(self):
                 return 0
 
             def call(self, _interpreter, _args):
                 import time
+
                 return time.time()
 
         self.globals = Environment()
@@ -150,7 +214,35 @@ class Interpreter:
             self.execute(stmt.stmt)
 
     def visit_func_statement(self, func):
-        self.env.define(func.name.lexeme, LoxFunction(func, self.env))
+        self.env.define(func.name.lexeme, LoxFunction(func, self.env, False))
+
+    def visit_class_statement(self, stmt):
+        supercls = None
+        if stmt.supercls:
+            supercls = self.evaluate(stmt.supercls)
+            if not isinstance(supercls, LoxClass):
+                raise RunTimeError(stmt.supercls.name, "superclass must be a class.")
+
+        # That two-stage variable binding process allows references
+        # to the class inside its own methods.
+        self.env.define(stmt.name.lexeme, None)
+
+        if stmt.supercls:
+            self.env = Environment(self.env)
+            self.env.define("super", supercls)
+
+        methods = {}
+        for method in stmt.methods:
+            methods[method.name.lexeme] = LoxFunction(
+                method, self.env, method.name.lexeme == "init"
+            )
+
+        cls = LoxClass(stmt.name.lexeme, supercls, methods)
+
+        if stmt.supercls:
+            self.env = self.env.enclosing
+
+        self.env.define(stmt.name.lexeme, cls)
 
     def visit_return_statement(self, stmt):
         value = None
@@ -226,11 +318,15 @@ class Interpreter:
         left = self.evaluate(expr.left)
         truthy = self.is_truthy(left)
         op = expr.op
-        if op.type == TokenType.OR and truthy or op.type == TokenType.AND and not truthy:
+        if (
+            op.type == TokenType.OR
+            and truthy
+            or op.type == TokenType.AND
+            and not truthy
+        ):
             return left
 
         return self.evaluate(expr.right)
-
 
     def visit_variable_expr(self, expr):
         return self.lookup_variable(expr.name, expr)
@@ -252,8 +348,40 @@ class Interpreter:
 
         args = [self.evaluate(arg) for arg in expr.args]
         if len(args) != callee.arity():
-            raise RunTimeError(expr.paren, f"Expected {callee.arity()} arguments, {len(args)} provided.")
+            raise RunTimeError(
+                expr.paren,
+                f"Expected {callee.arity()} arguments, {len(args)} provided.",
+            )
         return callee.call(self, args)
+
+    def visit_get_expr(self, expr):
+        obj = self.evaluate(expr.obj)
+        if isinstance(obj, LoxInstance):
+            return obj.get(expr.name)
+
+        raise RunTimeError(expr.name, "only instances can have properties.")
+
+    def visit_set_expr(self, expr):
+        obj = self.evaluate(expr.obj)
+        if not isinstance(obj, LoxInstance):
+            raise RunTimeError(expr.name, "only instances can set properties.")
+
+        value = self.evaluate(expr.value)
+        obj.set(expr.name, value)
+        return value
+
+    def visit_this_expr(self, expr):
+        return self.lookup_variable(expr.keyword, expr)
+
+    def visit_super_expr(self, expr):
+        distance = self.locals.get(expr)
+        supercls = self.env.get_at(distance, "super")
+        obj = self.env.get_at(distance - 1, "this")
+        method = supercls.get_method(expr.method.lexeme)
+        if not method:
+            raise RunTimeError(f"Undefined property {expr.method.lexeme}.")
+
+        return method.bind(obj)
 
     def is_truthy(self, value):
         # false and nil are falsey, and everything else is truthy.
